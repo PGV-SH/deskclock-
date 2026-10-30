@@ -1,0 +1,15 @@
+{
+  "name": "desk-clock",
+  "productName": "DeskClock",
+  "version": "1.0.0",
+  "description": "极简全屏时钟",
+  "main": "main.js",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "7zip-bin": "^5.2.0",
+    "electron": "^45.1.0",
+    "resedit": "^3.1.0",
+    "sharp": "^0.35.5"
+  }
+}

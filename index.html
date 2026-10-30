@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>极简时钟</title>
+<style>
+  :root{
+    --accent:#e8c07a;
+    --bg:#0a0a0c;
+    --fg:#f3f0ea;
+    --dim:rgba(255,255,255,.42);
+    --card:rgba(255,255,255,.07);
+    --line:rgba(255,255,255,.14);
+    --panel:rgba(18,18,22,.92);
+    --sx:0px; --sy:0px;
+  }
+  body[data-theme="paper"]{
+    --bg:#efece4; --fg:#1b1916; --dim:rgba(0,0,0,.42);
+    --card:rgba(0,0,0,.055); --line:rgba(0,0,0,.14); --panel:rgba(250,248,242,.94);
+  }
+  body[data-theme="ink"]{
+    --bg:#12161b; --fg:#dfe7ee; --dim:rgba(223,231,238,.4);
+    --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.12); --panel:rgba(20,25,31,.94);
+  }
+  body[data-theme="warm"]{
+    --bg:#171009; --fg:#ffd9a3; --dim:rgba(255,217,163,.38);
+    --card:rgba(255,190,120,.08); --line:rgba(255,190,120,.16); --panel:rgba(30,20,12,.94);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%; margin:0}
+  body{
+    background:var(--bg); color:var(--fg); overflow:hidden;
+    font-family:"Segoe UI Variable Display","Segoe UI",Inter,system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-variant-numeric:tabular-nums;
+    transition:background .6s ease,color .6s ease;
+    user-select:none; -webkit-user-select:none;
+  }
+  body.hide-ui{cursor:none}
+
+  #stage{
+    position:fixed; inset:0; display:grid; place-items:center;
+    transform:translate(var(--sx),var(--sy));
+    transition:transform 3s ease, opacity .5s ease, filter .6s ease;
+  }
+
+  .face{
+    position:absolute; inset:0; display:grid; place-items:center;
+    opacity:0; pointer-events:none; transition:opacity .32s ease;
+  }
+  .face.active{opacity:1; transition-delay:.2s}
+
+  /* ---------- analog ---------- */
+  .clock-svg{
+    width:min(78vmin,720px); height:min(78vmin,720px); display:block;
+    transition:opacity .4s;
+  }
+  .clock-svg .tick{stroke:var(--dim); stroke-width:1.2}
+  .clock-svg .tick.major{stroke:var(--fg); stroke-width:1.6; opacity:.75}
+  .clock-svg .numeral{fill:var(--fg); font-family:"Optima","Palatino Linotype","Times New Roman",serif; font-size:26px; letter-spacing:.5px}
+  .clock-svg .numeral.plain{font-family:inherit; font-size:22px; font-weight:300; letter-spacing:2px}
+  .clock-svg .hand{fill:var(--fg); transform-origin:200px 200px; will-change:transform}
+  .clock-svg .hand.h-hour{width:8px}
+  .clock-svg .hand-second{fill:var(--accent); transform-origin:200px 200px}
+  .clock-svg .pin{fill:var(--accent)}
+
+  /* ---------- digital ---------- */
+  .digital-wrap{display:flex; flex-direction:column; align-items:center; gap:2.2vmin}
+  .time-big{
+    font-size:min(26vw,30vh,300px); font-weight:200; line-height:.92;
+    letter-spacing:-.02em; display:flex; align-items:baseline;
+  }
+  .time-big .colon{padding:0 .06em; transform:translateY(-.06em); opacity:.55; animation:blink 2s steps(1) infinite}
+  .time-big .colon.off{animation:none; opacity:.55}
+  @keyframes blink{50%{opacity:.2}}
+  .time-big .secs{font-size:.26em; font-weight:300; opacity:.6; margin-left:.12em; letter-spacing:.04em}
+  .date-line{font-size:min(2.4vw,3.2vh,26px); letter-spacing:.28em; color:var(--dim); text-transform:uppercase}
+
+  /* ---------- cards ---------- */
+  .cards-wrap{display:flex; align-items:center; gap:min(1.4vw,16px); flex-direction:column}
+  .cards{display:flex; gap:min(1.2vw,14px); align-items:center}
+  .d-card{
+    width:min(15vw,19vh,150px); height:min(21vw,27vh,210px);
+    background:var(--card); border:1px solid var(--line); border-radius:min(1.4vw,18px);
+    display:grid; place-items:center; overflow:hidden; position:relative;
+    box-shadow:0 18px 50px rgba(0,0,0,.28);
+  }
+  .d-card span{
+    position:absolute; inset:0; display:grid; place-items:center;
+    font-size:min(11vw,15vh,118px); font-weight:300; line-height:1;
+    transition:transform .3s cubic-bezier(.3,.8,.3,1), opacity .3s;
+  }
+  .d-card span.out{transform:translateY(-60%); opacity:0}
+  .d-card span.in{transform:translateY(60%); opacity:0}
+  .c-sep{font-size:min(9vw,12vh,96px); font-weight:200; opacity:.4; margin:0 .1em}
+  .cards-meta{display:flex; align-items:center; gap:1.4vmin; font-size:min(1.6vw,2.4vh,18px); color:var(--dim); letter-spacing:.18em}
+  .cards-sec{color:var(--accent); font-size:min(1.8vw,2.8vh,22px)}
+
+  /* ---------- world ---------- */
+  .world-wrap{display:flex; flex-direction:column; gap:4vmin; width:min(84vw,900px)}
+  .world-main{display:flex; align-items:baseline; justify-content:space-between; gap:2vmin; border-bottom:1px solid var(--line); padding-bottom:2vmin}
+  .world-main .city{font-size:min(2vw,3vh,22px); letter-spacing:.3em; color:var(--dim)}
+  .world-main .t{font-size:min(13vw,17vh,150px); font-weight:200; line-height:1}
+  .world-rows{display:grid; gap:1.6vmin}
+  .w-row{display:flex; align-items:baseline; justify-content:space-between; font-size:min(2.6vw,4vh,34px); font-weight:300; color:var(--dim)}
+  .w-row b{color:var(--fg); font-weight:300; letter-spacing:.02em}
+  .w-row small{font-size:.6em; letter-spacing:.24em; color:var(--dim); margin-left:1.2em}
+  .world-rows{display:grid; gap:1.6vmin 3vw; grid-template-columns:repeat(auto-fit,minmax(min(34vw,260px),1fr))}
+
+  /* ---------- text clock ---------- */
+  .text-wrap{text-align:center; padding:0 4vw}
+  .text-time{font-size:min(6.4vw,10vh,92px); font-weight:300; letter-spacing:.1em; line-height:1.35}
+  .text-date{margin-top:2.4vmin; font-size:min(2vw,2.8vh,22px); letter-spacing:.3em; color:var(--dim)}
+
+  /* ---------- rings ---------- */
+  .rings-wrap{position:relative; width:min(76vmin,700px); aspect-ratio:1; display:grid; place-items:center}
+  .rings-svg{position:absolute; inset:0; width:100%; height:100%}
+  .rings-center{position:relative; text-align:center}
+  .rc-time{font-size:min(9vmin,110px); font-weight:200; letter-spacing:.02em; line-height:1}
+  .rc-date{margin-top:1.2vmin; font-size:min(1.8vw,2.4vh,17px); letter-spacing:.22em; color:var(--dim)}
+
+  /* ---------- stacked digits ---------- */
+  .stack-wrap{display:flex; flex-direction:column; align-items:center}
+  .stack-time{font-size:min(24vw,32vh,270px); font-weight:200; line-height:.86; letter-spacing:-.03em}
+  .stack-line{width:min(36vw,340px); height:1px; background:var(--line); margin:1.6vmin 0}
+  .stack-meta{margin-top:2.4vmin; font-size:min(1.9vw,2.6vh,20px); letter-spacing:.28em; color:var(--dim)}
+
+  /* ---------- binary clock ---------- */
+  .bin-wrap{display:flex; gap:min(2.4vw,30px); align-items:flex-end}
+  .bin-col{display:flex; flex-direction:column; align-items:center}
+  .bin-dots{display:flex; flex-direction:column; gap:min(1.2vh,10px)}
+  .bin-dot{width:min(5vw,7.6vh,52px); aspect-ratio:1; border-radius:50%; background:var(--card); border:1px solid var(--line); transition:background .25s ease, border-color .25s ease}
+  .bin-dot.on{background:var(--accent); border-color:var(--accent)}
+  .bin-tag{margin-top:2vmin; font-size:min(1.4vw,2vh,13px); letter-spacing:.14em; color:var(--dim)}
+
+  /* ---------- dot matrix ---------- */
+  .dm-wrap{display:flex; flex-direction:column; align-items:center}
+  .dm-row{display:flex; align-items:stretch; gap:min(2vw,24px)}
+  .dm-digit{display:grid; grid-template-columns:repeat(5,1fr); gap:min(.72vw,.9vh,7px)}
+  .dm-cell{width:min(2.4vw,4vh,26px); aspect-ratio:1; border-radius:50%; background:var(--card)}
+  .dm-cell.on{background:var(--fg)}
+  .dm-colon{display:flex; flex-direction:column; justify-content:center; gap:min(3.2vh,28px); padding:0 min(.4vw,4px)}
+  .dm-colon i{display:block; width:min(2.4vw,4vh,26px); aspect-ratio:1; border-radius:50%; background:var(--accent)}
+  .dm-meta{margin-top:2.4vmin; font-size:min(1.9vw,2.6vh,20px); letter-spacing:.24em; color:var(--dim)}
+
+  /* ---------- split numbers ---------- */
+  .split-wrap{display:flex; flex-direction:column; align-items:center}
+  .split-main{display:flex; align-items:center; gap:min(3vw,38px)}
+  .split-num{font-size:min(23vw,30vh,260px); font-weight:200; line-height:.9; letter-spacing:-.03em}
+  .split-num.dim{opacity:.5}
+  .split-bar{width:1px; height:min(20vh,180px); background:var(--line)}
+  .split-meta{margin-top:2vmin; font-size:min(1.9vw,2.6vh,20px); letter-spacing:.26em; color:var(--dim)}
+
+  /* ---------- big date ---------- */
+  .date-wrap{display:flex; flex-direction:column; align-items:center; gap:1.2vmin}
+  .date-time{font-size:min(3.2vw,4.4vh,38px); letter-spacing:.16em; color:var(--dim)}
+  .date-day{font-size:min(20vw,26vh,230px); font-weight:200; line-height:.88}
+  .date-meta{display:flex; align-items:baseline; gap:1.6vmin; font-size:min(2vw,2.8vh,22px); letter-spacing:.18em; color:var(--dim)}
+
+  /* ---------- background image ---------- */
+  :root{--scrim:rgba(0,0,0,.45)}
+  body[data-theme="paper"]{--scrim:rgba(246,243,236,.62)}
+  body[data-theme="ink"]{--scrim:rgba(8,12,16,.5)}
+  body[data-theme="warm"]{--scrim:rgba(20,12,6,.5)}
+  body{background-size:cover; background-position:center; background-repeat:no-repeat}
+  body.bg-image::before{
+    content:""; position:fixed; inset:0; background:var(--scrim); z-index:0; pointer-events:none;
+  }
+  #stage{z-index:1}
+
+  /* ---------- chips ---------- */
+  .chips{display:flex; flex-wrap:wrap; gap:7px}
+  .chip{
+    padding:8px 12px; border-radius:999px; border:1px solid var(--line);
+    background:transparent; color:var(--dim); font-family:inherit; font-size:12px;
+    cursor:pointer; transition:.2s;
+  }
+  .chip:hover{color:var(--fg)}
+  .chip.sel{border-color:var(--accent); color:var(--accent)}
+  .tip{font-size:11px; color:var(--dim); margin-top:10px; line-height:1.6}
+
+  /* ---------- controls ---------- */
+  #hint{
+    position:fixed; top:0; left:0; right:0; padding:2.2vh 3vw;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px; letter-spacing:.12em; color:var(--dim);
+    opacity:0; transition:opacity .4s; pointer-events:none;
+  }
+  #hint.show{opacity:1}
+
+  #bar{
+    position:fixed; left:50%; bottom:max(18px,3vh); transform:translateX(-50%) translateY(140%);
+    display:flex; align-items:center; gap:4px; padding:7px;
+    background:var(--panel); border:1px solid var(--line); border-radius:999px;
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+    transition:transform .45s cubic-bezier(.2,.9,.2,1), opacity .35s;
+    opacity:0; z-index:20;
+  }
+  #bar.show{transform:translateX(-50%) translateY(0); opacity:1}
+  .icon-btn{
+    width:44px; height:44px; border:0; border-radius:999px; background:transparent; color:var(--fg);
+    display:grid; place-items:center; cursor:pointer; transition:background .2s, transform .15s;
+  }
+  .icon-btn:hover{background:var(--card)}
+  .icon-btn:active{transform:scale(.92)}
+  .icon-btn svg{width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:1.7}
+  .bar-label{font-size:12px; letter-spacing:.16em; color:var(--dim); padding:0 10px; white-space:nowrap}
+  .bar-sep{width:1px; height:24px; background:var(--line); margin:0 2px}
+
+  /* ---------- settings ---------- */
+  #panel{
+    position:fixed; top:0; right:0; bottom:0; width:min(400px,88vw);
+    background:var(--panel); backdrop-filter:blur(26px); -webkit-backdrop-filter:blur(26px);
+    border-left:1px solid var(--line); padding:26px 24px 24px;
+    transform:translateX(102%); transition:transform .45s cubic-bezier(.2,.9,.2,1);
+    overflow-y:auto; z-index:30;
+  }
+  #panel.open{transform:translateX(0)}
+  .p-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px}
+  .p-title{font-size:13px; letter-spacing:.34em; color:var(--dim); text-transform:uppercase}
+  .sec{margin-bottom:24px}
+  .sec-t{font-size:12px; letter-spacing:.2em; color:var(--dim); margin-bottom:10px}
+  .grid{display:grid; gap:8px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .opt{
+    padding:12px 10px; border:1px solid var(--line); border-radius:12px; background:transparent;
+    color:var(--fg); font-size:13px; cursor:pointer; text-align:center; transition:.2s;
+    font-family:inherit;
+  }
+  .opt:hover{background:var(--card)}
+  .opt.sel{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset}
+  .row{display:flex; align-items:center; justify-content:space-between; padding:11px 0; font-size:14px}
+  .switch{position:relative; width:44px; height:25px; border-radius:999px; background:var(--line); border:0; cursor:pointer; transition:.25s; flex:none}
+  .switch::after{content:""; position:absolute; top:3px; left:3px; width:19px; height:19px; border-radius:50%; background:var(--fg); transition:.25s}
+  .switch.on{background:var(--accent)}
+  .switch.on::after{left:22px}
+  .swatches{display:flex; gap:10px; flex-wrap:wrap}
+  .sw{width:34px; height:34px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; transition:.2s}
+  .sw.sel{border-color:var(--fg); transform:scale(1.08)}
+  .themes{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .th{height:54px; border-radius:12px; border:2px solid var(--line); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; letter-spacing:.14em; transition:.2s; font-family:inherit}
+  .th.sel{border-color:var(--accent)}
+  .slider{width:100%; accent-color:var(--accent); margin-top:6px}
+  .p-foot{display:flex; gap:8px; margin-top:8px}
+  .ghost{flex:1; padding:11px; border-radius:12px; border:1px solid var(--line); background:transparent; color:var(--dim); font-family:inherit; font-size:12px; letter-spacing:.14em; cursor:pointer}
+  .ghost:hover{color:var(--fg)}
+  .credit{margin-top:20px; text-align:center; font-size:11px; letter-spacing:.22em; color:var(--dim); opacity:.75}
+
+  /* night dim overlay */
+  #night{
+    position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; z-index:5;
+    transition:opacity 4s ease;
+  }
+  .toast{
+    position:fixed; left:50%; top:14vh; transform:translateX(-50%) translateY(-10px);
+    padding:10px 18px; border-radius:999px; background:var(--panel); border:1px solid var(--line);
+    font-size:13px; letter-spacing:.14em; color:var(--fg); opacity:0; pointer-events:none;
+    transition:.35s; z-index:40; backdrop-filter:blur(14px);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  @media (max-width:640px){
+    #bar{bottom:12px}
+    .bar-label{display:none}
+  }
+</style>
+</head>
+<body data-theme="dark">
+<div id="stage">
+  <!-- 罗马盘 -->
+  <div class="face" data-face="roman">
+    <svg class="clock-svg" viewBox="0 0 400 400" aria-label="罗马数字时钟">
+      <g id="roman-ticks"></g>
+      <g id="roman-hands">
+        <line class="hand h-hour" x1="200" y1="200" x2="200" y2="82" stroke-width="5" stroke="var(--fg)" style="stroke-linecap:round"/>
+        <line class="hand h-min" x1="200" y1="200" x2="200" y2="58" stroke-width="3.4" stroke="var(--fg)" style="stroke-linecap:round"/>
+        <line class="hand-second" x1="200" y1="206" x2="200" y2="46" stroke-width="1.6" style="stroke-linecap:round"/>
+        <circle class="pin" cx="200" cy="200" r="4.5"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- 极简刻度盘 -->
+  <div class="face" data-face="minimal">
+    <svg class="clock-svg" viewBox="0 0 400 400" aria-label="极简时钟">
+      <g id="minimal-ticks"></g>
+      <g id="minimal-hands">
+        <line class="hand" x1="200" y1="200" x2="200" y2="86" stroke-width="5" stroke="var(--fg)" style="stroke-linecap:round"/>
+        <line class="hand" x1="200" y1="200" x2="200" y2="60" stroke-width="3.4" stroke="var(--fg)" style="stroke-linecap:round"/>
+        <line class="hand-second" x1="200" y1="208" x2="200" y2="50" stroke-width="1.4" style="stroke-linecap:round"/>
+        <circle class="pin" cx="200" cy="200" r="3.4"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- 大数字 -->
+  <div class="face" data-face="digital">
+    <div class="digital-wrap">
+      <div class="time-big">
+        <span id="d-h">00</span><span class="colon" id="d-colon">:</span><span id="d-m">00</span><span class="secs" id="d-s">00</span>
+      </div>
+      <div class="date-line" id="d-date"></div>
+    </div>
+  </div>
+
+  <!-- 翻页卡片 -->
+  <div class="face" data-face="cards">
+    <div class="cards-wrap">
+      <div class="cards">
+        <div class="d-card"><span id="c-h1">0</span></div>
+        <div class="d-card"><span id="c-h2">0</span></div>
+        <div class="c-sep">:</div>
+        <div class="d-card"><span id="c-m1">0</span></div>
+        <div class="d-card"><span id="c-m2">0</span></div>
+      </div>
+      <div class="cards-meta">
+        <span id="c-date"></span>
+        <span class="cards-sec" id="c-sec">:00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 世界钟 -->
+  <div class="face" data-face="world">
+    <div class="world-wrap">
+      <div class="world-main">
+        <span class="city">本地时间</span>
+        <div class="t" id="w-local">00:00</div>
+      </div>
+      <div class="world-rows" id="w-rows"></div>
+    </div>
+  </div>
+
+  <!-- 文字时钟 -->
+  <div class="face" data-face="text">
+    <div class="text-wrap">
+      <div class="text-time" id="t-time"></div>
+      <div class="text-date" id="t-date"></div>
+    </div>
+  </div>
+
+  <!-- 圆环时钟 -->
+  <div class="face" data-face="rings">
+    <div class="rings-wrap">
+      <svg class="rings-svg" viewBox="0 0 400 400">
+        <circle cx="200" cy="200" r="172" fill="none" stroke="var(--dim)" stroke-width="1.4" opacity=".35"/>
+        <circle cx="200" cy="200" r="146" fill="none" stroke="var(--dim)" stroke-width="1.4" opacity=".35"/>
+        <circle cx="200" cy="200" r="120" fill="none" stroke="var(--dim)" stroke-width="1.4" opacity=".35"/>
+        <circle id="ring-s" cx="200" cy="200" r="172" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" transform="rotate(-90 200 200)"/>
+        <circle id="ring-m" cx="200" cy="200" r="146" fill="none" stroke="var(--fg)" stroke-width="4" stroke-linecap="round" transform="rotate(-90 200 200)"/>
+        <circle id="ring-h" cx="200" cy="200" r="120" fill="none" stroke="var(--fg)" stroke-width="6" stroke-linecap="round" opacity=".55" transform="rotate(-90 200 200)"/>
+      </svg>
+      <div class="rings-center">
+        <div class="rc-time" id="r-time">00:00</div>
+        <div class="rc-date" id="r-date"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 上下数字 -->
+  <div class="face" data-face="stack">
+    <div class="stack-wrap">
+      <div class="stack-time" id="s-h">00</div>
+      <div class="stack-line"></div>
+      <div class="stack-time" id="s-m">00</div>
+      <div class="stack-meta" id="s-meta"></div>
+    </div>
+  </div>
+
+  <!-- 二进制钟 -->
+  <div class="face" data-face="binary">
+    <div class="bin-wrap" id="bin-grid"></div>
+  </div>
+
+  <!-- 点阵钟 -->
+  <div class="face" data-face="dotmatrix">
+    <div class="dm-wrap">
+      <div class="dm-row" id="dm-grid"></div>
+      <div class="dm-meta" id="dm-meta"></div>
+    </div>
+  </div>
+
+  <!-- 左右数字 -->
+  <div class="face" data-face="split">
+    <div class="split-wrap">
+      <div class="split-main">
+        <div class="split-num" id="sp-h">00</div>
+        <div class="split-bar"></div>
+        <div class="split-num dim" id="sp-m">00</div>
+      </div>
+      <div class="split-meta" id="sp-meta"></div>
+    </div>
+  </div>
+
+  <!-- 大字日期 -->
+  <div class="face" data-face="date">
+    <div class="date-wrap">
+      <div class="date-time" id="dt-time">00:00</div>
+      <div class="date-day" id="dt-day">1</div>
+      <div class="date-meta" id="dt-meta"></div>
+    </div>
+  </div>
+</div>
+
+<div id="night"></div>
+
+<div id="hint">
+  <span id="hint-left">极简时钟</span>
+  <span id="hint-right">空格 隐藏界面 · F 全屏 · ← → 切换表盘</span>
+</div>
+
+<div id="bar">
+  <button class="icon-btn" id="btn-fs" title="全屏 (F)">
+    <svg viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/></svg>
+  </button>
+  <div class="bar-sep"></div>
+  <button class="icon-btn" id="btn-prev" title="上一个表盘">
+    <svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>
+  </button>
+  <span class="bar-label" id="bar-label">罗马盘</span>
+  <button class="icon-btn" id="btn-next" title="下一个表盘">
+    <svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
+  </button>
+  <div class="bar-sep"></div>
+  <button class="icon-btn" id="btn-theme" title="切换主题">
+    <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 6.5 6.5 0 0 1-9-9Z"/></svg>
+  </button>
+  <button class="icon-btn" id="btn-settings" title="设置 (S)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 3.6 15a1.7 1.7 0 0 0-1.56-1H2a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 3.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 8 4.6 1.7 1.7 0 0 0 9 3.09V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.51 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z"/></svg>
+  </button>
+</div>
+
+<aside id="panel" aria-label="设置">
+  <div class="p-head">
+    <span class="p-title">设置</span>
+    <button class="icon-btn" id="panel-close" title="关闭">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">表盘样式</div>
+    <div class="grid g3" id="face-opts">
+      <button class="opt" data-f="roman">罗马盘</button>
+      <button class="opt" data-f="minimal">极简盘</button>
+      <button class="opt" data-f="digital">大数字</button>
+      <button class="opt" data-f="cards">翻页卡</button>
+      <button class="opt" data-f="world">世界钟</button>
+      <button class="opt" data-f="text">文字钟</button>
+      <button class="opt" data-f="rings">圆环钟</button>
+      <button class="opt" data-f="stack">上下数字</button>
+      <button class="opt" data-f="binary">二进制钟</button>
+      <button class="opt" data-f="dotmatrix">点阵钟</button>
+      <button class="opt" data-f="split">左右数字</button>
+      <button class="opt" data-f="date">大字日期</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">世界时钟城市</div>
+    <div class="chips" id="city-opts"></div>
+    <div class="tip">点选想看的城市，最多 6 个。</div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">背景图片</div>
+    <div class="chips">
+      <button class="chip" id="bg-pick">选择图片…</button>
+      <button class="chip" id="bg-clear">纯色背景</button>
+    </div>
+    <input type="file" id="bg-file" accept="image/*" hidden>
+    <div class="tip">图片会在本机压缩保存，不会上传。</div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">主题</div>
+    <div class="themes">
+      <button class="th" data-th="dark" style="background:#0a0a0c;color:#f3f0ea">暗夜</button>
+      <button class="th" data-th="paper" style="background:#efece4;color:#1b1916">纸白</button>
+      <button class="th" data-th="ink" style="background:#12161b;color:#dfe7ee">墨蓝</button>
+      <button class="th" data-th="warm" style="background:#171009;color:#ffd9a3">暖光</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">强调色</div>
+    <div class="swatches" id="acc-opts"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">显示选项</div>
+    <div class="row"><span>24 小时制</span><button class="switch" data-k="h24"></button></div>
+    <div class="row"><span>显示秒</span><button class="switch" data-k="secs"></button></div>
+    <div class="row"><span>显示日期</span><button class="switch" data-k="date"></button></div>
+    <div class="row"><span>秒针平滑走动</span><button class="switch" data-k="smooth"></button></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-t">屏幕保护</div>
+    <div class="row"><span>防烧屏：画面缓慢位移</span><button class="switch" data-k="shift"></button></div>
+    <div class="row"><span>保持屏幕常亮</span><button class="switch" data-k="wake"></button></div>
+    <div class="row"><span>夜间自动调暗</span><button class="switch" data-k="night"></button></div>
+    <div class="row" style="display:block">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>亮度</span><span id="bright-val" style="color:var(--dim);font-size:12px">100%</span></div>
+      <input type="range" min="20" max="100" step="5" class="slider" id="bright">
+    </div>
+  </div>
+
+  <div class="p-foot">
+    <button class="ghost" id="reset">恢复默认</button>
+    <button class="ghost" id="fullbtn">进入全屏</button>
+  </div>
+  <div class="credit">DeskClock by Zohan</div>
+</aside>
+
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+  'use strict';
+  const KEY = 'minimal-clock-v1';
+  const BGKEY = 'minimal-clock-bg-v1';
+  const DEFAULTS = { face:'roman', theme:'dark', accent:'#e8c07a', h24:false, secs:true, date:true, smooth:true, shift:true, wake:true, night:false, bright:100, cities:['Asia/Tokyo','Europe/London','America/New_York'] };
+  const NAMES = { roman:'罗马盘', minimal:'极简盘', digital:'大数字', cards:'翻页卡', world:'世界钟', text:'文字钟', rings:'圆环钟', stack:'上下数字', binary:'二进制钟', dotmatrix:'点阵钟', split:'左右数字', date:'大字日期' };
+  const FACES = Object.keys(NAMES);
+  const MAX_CITIES = 6;
+  const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  const CITY_LIST = [
+    { cn:'北京', en:'BEIJING', tz:'Asia/Shanghai' },
+    { cn:'香港', en:'HONG KONG', tz:'Asia/Hong_Kong' },
+    { cn:'东京', en:'TOKYO', tz:'Asia/Tokyo' },
+    { cn:'首尔', en:'SEOUL', tz:'Asia/Seoul' },
+    { cn:'新加坡', en:'SINGAPORE', tz:'Asia/Singapore' },
+    { cn:'曼谷', en:'BANGKOK', tz:'Asia/Bangkok' },
+    { cn:'孟买', en:'MUMBAI', tz:'Asia/Kolkata' },
+    { cn:'迪拜', en:'DUBAI', tz:'Asia/Dubai' },
+    { cn:'莫斯科', en:'MOSCOW', tz:'Europe/Moscow' },
+    { cn:'柏林', en:'BERLIN', tz:'Europe/Berlin' },
+    { cn:'巴黎', en:'PARIS', tz:'Europe/Paris' },
+    { cn:'伦敦', en:'LONDON', tz:'Europe/London' },
+    { cn:'罗马', en:'ROME', tz:'Europe/Rome' },
+    { cn:'纽约', en:'NEW YORK', tz:'America/New_York' },
+    { cn:'芝加哥', en:'CHICAGO', tz:'America/Chicago' },
+    { cn:'洛杉矶', en:'LOS ANGELES', tz:'America/Los_Angeles' },
+    { cn:'多伦多', en:'TORONTO', tz:'America/Toronto' },
+    { cn:'圣保罗', en:'SÃO PAULO', tz:'America/Sao_Paulo' },
+    { cn:'开罗', en:'CAIRO', tz:'Africa/Cairo' },
+    { cn:'悉尼', en:'SYDNEY', tz:'Australia/Sydney' },
+    { cn:'奥克兰', en:'AUCKLAND', tz:'Pacific/Auckland' },
+    { cn:'檀香山', en:'HONOLULU', tz:'Pacific/Honolulu' }
+  ];
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+  let S = Object.assign({}, DEFAULTS, load());
+
+  function normCities(list){
+    const seen = new Set(), out = [];
+    (Array.isArray(list) ? list : []).forEach(tz => {
+      if (CITY_LIST.some(c => c.tz === tz) && !seen.has(tz) && out.length < MAX_CITIES){
+        seen.add(tz); out.push(tz);
+      }
+    });
+    return out.length ? out : DEFAULTS.cities.slice();
+  }
+  S.cities = normCities(S.cities);
+
+  /* ---------------- analog construction ---------------- */
+  function mk(tag, attrs){
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function pt(angle, r){
+    const a = (angle - 90) * Math.PI / 180;
+    return [200 + r * Math.cos(a), 200 + r * Math.sin(a)];
+  }
+  function buildTicks(g, opts){
+    for (let i = 0; i < 60; i++){
+      const major = i % 5 === 0;
+      if (opts.hoursOnly && !major) continue;
+      const a = i * 6;
+      const r1 = major ? 168 : (opts.hoursOnly ? 168 : 173);
+      const r2 = opts.hoursOnly ? 177 : (major ? 181 : 178);
+      const p1 = pt(a, r1), p2 = pt(a, r2);
+      const line = mk('line', { x1:p1[0], y1:p1[1], x2:p2[0], y2:p2[1], class:'tick' + (major ? ' major' : '') });
+      g.appendChild(line);
+    }
+  }
+  function buildNumerals(g){
+    for (let i = 1; i <= 12; i++){
+      const a = i * 30;
+      const [x, y] = pt(a, 146);
+      const t = mk('text', { x, y, class:'numeral', 'text-anchor':'middle', 'dominant-baseline':'middle' });
+      t.textContent = ROMAN[i - 1];
+      g.appendChild(t);
+    }
+  }
+  const romanTicks = $('#roman-ticks');
+  buildTicks(romanTicks, { hoursOnly: false });
+  buildNumerals(romanTicks);
+  buildTicks($('#minimal-ticks'), { hoursOnly: false });
+
+  // hands proportional to face style
+  const romanLines = Array.from($('#roman-hands').querySelectorAll('line'));
+  romanLines[0].setAttribute('y2', 104);
+  romanLines[1].setAttribute('y2', 92);
+  romanLines[2].setAttribute('y2', 62);
+  const minimalLines = Array.from($('#minimal-hands').querySelectorAll('line'));
+  minimalLines[0].setAttribute('y2', 112);
+  minimalLines[1].setAttribute('y2', 80);
+  minimalLines[2].setAttribute('y2', 58);
+
+  /* ---------------- text helpers ---------------- */
+  const WEEK = ['日','一','二','三','四','五','六'];
+  const CN_NUM = ['零','一','二','三','四','五','六','七','八','九'];
+  const pad = n => String(n).padStart(2, '0');
+  const fmtLocal = d => (S.h24 ? pad(d.getHours()) : pad(d.getHours() % 12 || 12)) + ':' + pad(d.getMinutes());
+  const dateCN = d => `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · 星期${WEEK[d.getDay()]}`;
+  function cnNum(n){
+    if (n < 10) return CN_NUM[n];
+    const t = Math.floor(n / 10), o = n % 10;
+    return (t === 1 ? '' : CN_NUM[t]) + '十' + (o ? CN_NUM[o] : '');
+  }
+  const dayPart = d => d.getHours() < 6 ? '凌晨' : d.getHours() < 12 ? '上午' : d.getHours() < 18 ? '下午' : '晚上';
+  function wordTime(d){
+    const h = d.getHours();
+    let ap = '', hh;
+    if (S.h24){
+      hh = cnNum(h);
+    } else {
+      ap = dayPart(d);
+      hh = cnNum(h % 12 || 12);
+    }
+    const m = d.getMinutes();
+    return ap + hh + '点' + (m ? cnNum(m) + '分' : '');
+  }
+
+  /* ---------------- faces render ---------------- */
+  let lastSec = -1;
+  const cardEls = { h1:$('#c-h1'), h2:$('#c-h2'), m1:$('#c-m1'), m2:$('#c-m2') };
+  const cardVals = { h1:null, h2:null, m1:null, m2:null };
+  const tzFmt = {};
+  let cityRows = [];
+
+  const ringEls = { s:$('#ring-s'), m:$('#ring-m'), h:$('#ring-h') };
+  const ringR = {};
+  Object.keys(ringEls).forEach(k => { ringR[k] = 2 * Math.PI * +ringEls[k].getAttribute('r'); });
+  function setRing(k, frac){
+    const c = ringR[k];
+    const len = Math.max(0, Math.min(1, frac)) * c;
+    ringEls[k].setAttribute('stroke-dasharray', len.toFixed(2) + ' ' + (c + 4).toFixed(2));
+  }
+
+  /* ---------------- background image ---------------- */
+  let bgData = null;
+  try { bgData = localStorage.getItem(BGKEY); } catch(e){}
+
+  function applyBg(){
+    if (bgData){
+      document.body.style.backgroundImage = 'url("' + bgData + '")';
+      document.body.classList.add('bg-image');
+    } else {
+      document.body.style.backgroundImage = '';
+      document.body.classList.remove('bg-image');
+    }
+  }
+  function setBg(dataUrl){
+    const prev = bgData;
+    bgData = dataUrl || null;
+    try {
+      if (bgData) localStorage.setItem(BGKEY, bgData);
+      else localStorage.removeItem(BGKEY);
+    } catch(e){
+      bgData = prev;
+      toast('图片太大，请换一张小一点的');
+      return;
+    }
+    applyBg();
+  }
+  function handleBgFile(file){
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 1920;
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * k);
+      const h = Math.round(img.naturalHeight * k);
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      try {
+        setBg(cv.toDataURL('image/jpeg', 0.82));
+        toast('背景已更新');
+      } catch(e){ toast('图片处理失败'); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast('图片读取失败'); };
+    img.src = url;
+  }
+
+  /* ---------------- binary + dot matrix ---------------- */
+  const BIN_W = [8,4,2,1];
+  const binCols = [];
+  (function buildBinary(){
+    const box = $('#bin-grid');
+    ['时十','时个','分十','分个','秒十','秒个'].forEach(label => {
+      const col = document.createElement('div');
+      col.className = 'bin-col';
+      const dots = document.createElement('div');
+      dots.className = 'bin-dots';
+      const cells = BIN_W.map(() => {
+        const d = document.createElement('div');
+        d.className = 'bin-dot';
+        dots.appendChild(d);
+        return d;
+      });
+      const tag = document.createElement('div');
+      tag.className = 'bin-tag';
+      tag.textContent = label;
+      col.appendChild(dots);
+      col.appendChild(tag);
+      box.appendChild(col);
+      binCols.push(cells);
+    });
+  })();
+
+  const DM_FONT = [
+    '11111|10001|10001|10001|10001|10001|11111',
+    '00100|01100|00100|00100|00100|00100|01110',
+    '11111|10001|00001|00110|01000|10000|11111',
+    '11111|00001|00001|01111|00001|00001|11111',
+    '10001|10001|10001|11111|00001|00001|00001',
+    '11111|10000|10000|11110|00001|00001|11110',
+    '01111|10000|10000|11110|10001|10001|01110',
+    '11111|00001|00010|00100|01000|01000|01000',
+    '01110|10001|10001|01110|10001|10001|01110',
+    '01110|10001|10001|01111|00001|00001|01110'
+  ].map(s => s.split('|'));
+  const dmDigits = [];
+  (function buildDotmatrix(){
+    const box = $('#dm-grid');
+    for (let n = 0; n < 4; n++){
+      if (n === 2){
+        const colon = document.createElement('div');
+        colon.className = 'dm-colon';
+        colon.innerHTML = '<i></i><i></i>';
+        box.appendChild(colon);
+      }
+      const dg = document.createElement('div');
+      dg.className = 'dm-digit';
+      const cells = [];
+      for (let i = 0; i < 35; i++){
+        const c = document.createElement('div');
+        c.className = 'dm-cell';
+        dg.appendChild(c);
+        cells.push(c);
+      }
+      box.appendChild(dg);
+      dmDigits.push(cells);
+    }
+  })();
+  function buildCityChips(){
+    const box = $('#city-opts');
+    box.innerHTML = '';
+    CITY_LIST.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'chip' + (S.cities.includes(c.tz) ? ' sel' : '');
+      b.dataset.tz = c.tz;
+      b.textContent = c.cn;
+      box.appendChild(b);
+    });
+  }
+  function buildCityRows(){
+    const box = $('#w-rows');
+    box.innerHTML = '';
+    cityRows = S.cities.map(tz => {
+      const c = CITY_LIST.find(x => x.tz === tz) || { cn: tz, en: '' };
+      const row = document.createElement('div');
+      row.className = 'w-row';
+      row.innerHTML = '<span>' + c.cn + '<small>' + c.en + '</small></span><b>--:--</b>';
+      box.appendChild(row);
+      return row;
+    });
+  }
+
+  function animateCard(span, next){
+    if (span.textContent === next) return;
+    span.className = 'out';
+    setTimeout(() => {
+      span.textContent = next;
+      span.className = 'in';
+      void span.offsetHeight;
+      span.className = '';
+    }, 300);
+  }
+
+  function renderTextFaces(d){
+    const h = pad(S.h24 ? d.getHours() : (d.getHours() % 12 || 12));
+    const m = pad(d.getMinutes());
+    const s = pad(d.getSeconds());
+    $('#d-h').textContent = h;
+    $('#d-m').textContent = m;
+    $('#d-s').textContent = S.secs ? s : '';
+    const dateStr = S.date ? dateCN(d) : '';
+    $('#d-date').textContent = dateStr;
+
+    // cards
+    const digits = [h[0], h[1], m[0], m[1]];
+    ['h1','h2','m1','m2'].forEach((k, i) => {
+      if (cardVals[k] !== digits[i]) { cardVals[k] = digits[i]; animateCard(cardEls[k], digits[i]); }
+    });
+    $('#c-sec').textContent = S.secs ? ':' + s : '';
+    $('#c-date').textContent = S.date ? dateCN(d) : '';
+
+    // world
+    $('#w-local').textContent = fmtLocal(d);
+    S.cities.forEach((tz, i) => {
+      const row = cityRows[i];
+      if (!row) return;
+      if (!tzFmt[tz]) tzFmt[tz] = new Intl.DateTimeFormat('en-GB', { timeZone:tz, hour12:false, hour:'2-digit', minute:'2-digit' });
+      row.querySelector('b').textContent = tzFmt[tz].format(d);
+    });
+
+    // word clock
+    $('#t-time').textContent = wordTime(d);
+    $('#t-date').textContent = dateStr;
+
+    // rings
+    $('#r-time').textContent = fmtLocal(d);
+    $('#r-date').textContent = dateStr;
+
+    // stacked digits
+    $('#s-h').textContent = h;
+    $('#s-m').textContent = m;
+    $('#s-meta').textContent = [S.date ? dateStr : '', S.secs ? s + ' 秒' : ''].filter(Boolean).join(' · ');
+
+    // binary (BCD)
+    const six = [Math.floor(d.getHours() / 10), d.getHours() % 10, Math.floor(d.getMinutes() / 10), d.getMinutes() % 10, Math.floor(d.getSeconds() / 10), d.getSeconds() % 10];
+    six.forEach((v, i) => {
+      binCols[i].forEach((dot, j) => dot.classList.toggle('on', (v & BIN_W[j]) !== 0));
+    });
+
+    // dot matrix
+    const hhmm = (S.h24 ? pad(d.getHours()) : pad(d.getHours() % 12 || 12)) + pad(d.getMinutes());
+    for (let i = 0; i < 4; i++){
+      const glyph = DM_FONT[+hhmm[i]];
+      const cells = dmDigits[i];
+      for (let k = 0; k < 35; k++){
+        cells[k].classList.toggle('on', glyph[Math.floor(k / 5)][k % 5] === '1');
+      }
+    }
+    $('#dm-meta').textContent = dateStr;
+
+    // split numbers
+    $('#sp-h').textContent = h;
+    $('#sp-m').textContent = m;
+    $('#sp-meta').textContent = [S.h24 ? '' : dayPart(d), dateStr, S.secs ? s + ' 秒' : ''].filter(Boolean).join(' · ');
+
+    // big date
+    $('#dt-time').textContent = h + ':' + m + (S.secs ? ':' + s : '');
+    $('#dt-day').textContent = String(d.getDate());
+    $('#dt-meta').textContent = S.date ? `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 · 星期${WEEK[d.getDay()]}` : (S.h24 ? '24 小时制' : dayPart(d));
+  }
+
+  /* ---------------- main loop ---------------- */
+  function loop(){
+    const now = new Date();
+    if (S.face === 'roman' || S.face === 'minimal'){
+      const lines = S.face === 'roman' ? romanLines : minimalLines;
+      const ss = now.getSeconds() + (S.smooth ? now.getMilliseconds() / 1000 : 0);
+      const mm = now.getMinutes() + ss / 60;
+      const hh = (now.getHours() % 12) + mm / 60;
+      lines[0].style.transform = `rotate(${hh * 30}deg)`;
+      lines[1].style.transform = `rotate(${mm * 6}deg)`;
+      lines[2].style.transform = `rotate(${ss * 6}deg)`;
+    }
+    if (S.face === 'rings'){
+      const ss = now.getSeconds() + now.getMilliseconds() / 1000;
+      const mm = now.getMinutes() + ss / 60;
+      const hh = (now.getHours() % 12) + mm / 60;
+      setRing('s', ss / 60);
+      setRing('m', mm / 60);
+      setRing('h', hh / 12);
+    }
+    if (now.getSeconds() !== lastSec){
+      lastSec = now.getSeconds();
+      renderTextFaces(now);
+      updateNight(now);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------------- settings / UI ---------------- */
+  const ACCENTS = ['#e8c07a','#f4f1ea','#ff7a63','#6ecf9f','#7aa7ff','#c792ea'];
+  const THEMES = ['dark','paper','ink','warm'];
+  let toastTimer;
+
+  function toast(msg){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  function apply(){
+    document.body.dataset.theme = S.theme;
+    document.documentElement.style.setProperty('--accent', S.accent);
+    $('#stage').style.opacity = String(S.bright / 100);
+    $('#bright-val').textContent = S.bright + '%';
+    $('#bright').value = S.bright;
+    $$('#face-opts .opt').forEach(b => b.classList.toggle('sel', b.dataset.f === S.face));
+    $$('.th').forEach(b => b.classList.toggle('sel', b.dataset.th === S.theme));
+    $$('#acc-opts .sw').forEach(b => b.classList.toggle('sel', b.dataset.c === S.accent));
+    $$('[data-k]').forEach(b => b.classList.toggle('on', !!S[b.dataset.k]));
+    $('#bar-label').textContent = NAMES[S.face];
+    applyBg();
+    buildCityChips();
+    buildCityRows();
+    lastSec = -1;
+    renderTextFaces(new Date());
+    updateNight(new Date());
+  }
+
+  function setFace(f){
+    S.face = f;
+    save();
+    $$('.face').forEach(x => x.classList.toggle('active', x.dataset.face === f));
+    $('#bar-label').textContent = NAMES[f];
+    $$('#face-opts .opt').forEach(b => b.classList.toggle('sel', b.dataset.f === f));
+    lastSec = -1;
+    renderTextFaces(new Date());
+  }
+
+  function stepFace(dir){
+    const i = FACES.indexOf(S.face);
+    setFace(FACES[(i + dir + FACES.length) % FACES.length]);
+    toast(NAMES[S.face]);
+  }
+
+  function cycleTheme(){
+    S.theme = THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length];
+    save(); apply();
+    toast({dark:'暗夜',paper:'纸白',ink:'墨蓝',warm:'暖光'}[S.theme]);
+  }
+
+  function toggleFS(){
+    const d = document.fullscreenElement || document.webkitFullscreenElement;
+    try {
+      if (d) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else {
+        const el = document.documentElement;
+        (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+      }
+    } catch(e){ toast('当前浏览器不支持全屏，请按 F11'); }
+  }
+
+  /* wake lock keeps the tablet screen on */
+  let wakeLock = null;
+  async function keepAwake(){
+    if (window.deskClock && window.deskClock.setWake) window.deskClock.setWake(!!S.wake);
+    if (!('wakeLock' in navigator)) return;
+    try {
+      if (S.wake && !wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+      if (!S.wake && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch(e){}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && S.wake){ wakeLock = null; keepAwake(); }
+  });
+
+  /* burn-in protection: shift the whole dial slightly now and then */
+  function shiftNow(){
+    if (!S.shift){
+      document.documentElement.style.setProperty('--sx', '0px');
+      document.documentElement.style.setProperty('--sy', '0px');
+      return;
+    }
+    document.documentElement.style.setProperty('--sx', ((Math.random() * 2 - 1) * 8).toFixed(1) + 'px');
+    document.documentElement.style.setProperty('--sy', ((Math.random() * 2 - 1) * 8).toFixed(1) + 'px');
+  }
+
+  function updateNight(d){
+    const h = d.getHours();
+    const on = S.night && (h >= 22 || h < 7);
+    $('#night').style.opacity = on ? '0.55' : '0';
+  }
+
+  /* auto hide chrome */
+  let uiTimer = null;
+  function showUI(){
+    $('#bar').classList.add('show');
+    $('#hint').classList.add('show');
+    document.body.classList.remove('hide-ui');
+    clearTimeout(uiTimer);
+    if ($('#panel').classList.contains('open')) return;
+    uiTimer = setTimeout(hideUI, 4000);
+  }
+  function hideUI(){
+    $('#bar').classList.remove('show');
+    $('#hint').classList.remove('show');
+    if (!$('#panel').classList.contains('open')) document.body.classList.add('hide-ui');
+  }
+
+  function togglePanel(force){
+    const p = $('#panel');
+    const open = force === undefined ? !p.classList.contains('open') : force;
+    p.classList.toggle('open', open);
+    if (open){ showUI(); clearTimeout(uiTimer); }
+    else scheduleHide();
+  }
+  function scheduleHide(){
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(hideUI, 3500);
+  }
+
+  /* build accent swatches */
+  const accBox = $('#acc-opts');
+  ACCENTS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'sw';
+    b.dataset.c = c;
+    b.style.background = c;
+    b.title = c;
+    accBox.appendChild(b);
+  });
+
+  /* wiring */
+  $('#btn-fs').addEventListener('click', toggleFS);
+  $('#fullbtn').addEventListener('click', toggleFS);
+  $('#btn-prev').addEventListener('click', () => stepFace(-1));
+  $('#btn-next').addEventListener('click', () => stepFace(1));
+  $('#btn-theme').addEventListener('click', cycleTheme);
+  $('#btn-settings').addEventListener('click', () => togglePanel());
+  $('#panel-close').addEventListener('click', () => togglePanel(false));
+
+  $$('#face-opts .opt').forEach(b => b.addEventListener('click', () => setFace(b.dataset.f)));
+  $$('.th').forEach(b => b.addEventListener('click', () => { S.theme = b.dataset.th; save(); apply(); }));
+  accBox.addEventListener('click', e => {
+    const b = e.target.closest('.sw');
+    if (!b) return;
+    S.accent = b.dataset.c; save(); apply();
+  });
+
+  /* world city chips */
+  $('#city-opts').addEventListener('click', e => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    const tz = b.dataset.tz;
+    const i = S.cities.indexOf(tz);
+    if (i >= 0){
+      if (S.cities.length <= 1){ toast('至少保留一个城市'); return; }
+      S.cities.splice(i, 1);
+    } else {
+      if (S.cities.length >= MAX_CITIES){ toast('最多选择 ' + MAX_CITIES + ' 个城市'); return; }
+      S.cities.push(tz);
+    }
+    save();
+    buildCityChips();
+    buildCityRows();
+    lastSec = -1;
+    renderTextFaces(new Date());
+  });
+
+  /* background image */
+  $('#bg-pick').addEventListener('click', () => $('#bg-file').click());
+  $('#bg-file').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (f) handleBgFile(f);
+  });
+  $('#bg-clear').addEventListener('click', () => {
+    if (!bgData){ toast('当前已是纯色背景'); return; }
+    setBg(null);
+    toast('已切换为纯色背景');
+  });
+
+  $$('[data-k]').forEach(btn => btn.addEventListener('click', () => {
+    const k = btn.dataset.k;
+    S[k] = !S[k];
+    save(); apply();
+    if (k === 'wake') keepAwake();
+    if (k === 'shift') shiftNow();
+    if (k === 'night') updateNight(new Date());
+    if (k === 'secs') toast(S.secs ? '显示秒' : '隐藏秒');
+  }));
+
+  $('#bright').addEventListener('input', e => {
+    S.bright = +e.target.value;
+    $('#stage').style.opacity = String(S.bright / 100);
+    $('#bright-val').textContent = S.bright + '%';
+    save();
+  });
+
+  $('#reset').addEventListener('click', () => {
+    S = Object.assign({}, DEFAULTS);
+    save(); apply(); setFace(S.face); shiftNow(); keepAwake();
+    toast('已恢复默认设置');
+  });
+
+  /* pointer + idle behaviour */
+  ['mousemove','pointerdown','touchstart','wheel'].forEach(ev =>
+    window.addEventListener(ev, showUI, { passive:true })
+  );
+  $('#bar').addEventListener('pointerenter', () => clearTimeout(uiTimer));
+  $('#bar').addEventListener('pointerleave', () => { if (!$('#panel').classList.contains('open')) scheduleHide(); });
+  $('#panel').addEventListener('pointerenter', () => clearTimeout(uiTimer));
+  $('#panel').addEventListener('pointerleave', () => scheduleHide());
+
+  $('#stage').addEventListener('dblclick', toggleFS);
+
+  /* keyboard shortcuts */
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    const k = e.key.toLowerCase();
+    if (k === 'f') toggleFS();
+    else if (k === 's') togglePanel();
+    else if (e.key === ' '){ e.preventDefault(); hideUI(); }
+    else if (e.key === 'ArrowRight') stepFace(1);
+    else if (e.key === 'ArrowLeft') stepFace(-1);
+    else if (k === 't') cycleTheme();
+    else if (k >= '1' && k <= '9' && FACES[+k - 1]) setFace(FACES[+k - 1]);
+    else if (k === 'Escape' && $('#panel').classList.contains('open')) togglePanel(false);
+  });
+
+  /* boot */
+  $('.face[data-face="' + S.face + '"]').classList.add('active');
+  if (window.deskClock && window.deskClock.isApp){
+    const q = document.createElement('button');
+    q.className = 'ghost';
+    q.textContent = '退出程序';
+    q.addEventListener('click', () => window.deskClock.quit());
+    $('.p-foot').appendChild(q);
+  }
+  apply();
+  shiftNow();
+  setInterval(shiftNow, 45000);
+  keepAwake();
+  loop();
+  showUI();
+  setTimeout(() => { if (!$('#panel').classList.contains('open')) hideUI(); }, 5000);
+})();
+</script>
+</body>
+</html>
