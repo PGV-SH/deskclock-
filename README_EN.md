@@ -80,3 +80,7 @@ This project is open-sourced under **[CC BY-NC 4.0 (Attribution-NonCommercial)](
 | [Chromium](https://www.chromium.org/) | BSD | Rendering engine inside Electron |
 
 Full license texts of the above components are bundled with the packages (`LICENSE`, `LICENSES.chromium.html`).
+<img width="2560" height="1351" alt="e0f79a6ca12d65bb8c321fc8c8d3c67f" src="https://github.com/user-attachments/assets/bfba8e8f-157b-416b-8f13-17d40bcca7b3" />
+<img width="1853" height="1290" alt="截屏2026-10-31 16 00 12" src="https://github.com/user-attachments/assets/5141d381-0d25-46d3-b77a-5bb05808b7c4" />
+<img width="2560" height="1350" alt="80e0c3cf641d6223d452512781314ca6" src="https://github.com/user-attachments/assets/a0706195-0a6f-4724-8e5e-be7fd9a2b9f1" />
+<img width="2560" height="1350" alt="9f28df44c9253eb511189ba6bfcc8b14" src="https://github.com/user-attachments/assets/6a03f16f-6b59-4d96-95ed-4f27d40d6365" />
