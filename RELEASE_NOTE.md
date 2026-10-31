@@ -32,6 +32,7 @@
 | macOS Apple 芯片（M1–M4） | `DeskClock-1.0.0-arm64.dmg` |
 | macOS Intel | `DeskClock-1.0.0-x64.dmg` |
 | Android（8.0+） | `DeskClock-1.0.0.apk` |
+| iOS（15+，需自行签名） | `DeskClock-1.0.0-unsigned.ipa` |
 
 ## ⚠️ 安装提示
 
