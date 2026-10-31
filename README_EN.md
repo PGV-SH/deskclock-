@@ -9,10 +9,11 @@ Turn a spare tablet, old phone, or old computer into an elegant desk clock. A si
 
 ## Features
 
-### 12 Clock Faces
-Roman · Minimal · Digital · Flip Cards · World · Word Clock · Rings · Stacked · Binary · Dot Matrix · Split · Big Date
+### 13 Clock Faces
+Roman · Minimal · Square · Digital · Flip Cards · World · Word Clock · Rings · Stacked · Binary · Dot Matrix · Split · Big Date
 
 ### Personalization
+- **Alarms**: dedicated alarm panel (bell icon in the toolbar, shortcut `A`), multiple alarms with snooze, 4 sounds synthesized in code via Web Audio including an intense siren (no audio files, zero copyright concerns)
 - **Multi-language**: follows your system language by default — 简体中文, 繁體中文, English, 日本語, Français, Deutsch, Español, 한국어 — with manual override in Settings
 - **Custom background image**: pick any photo as the clock background; compressed and stored locally, never uploaded
 - **World clock**: choose up to 6 cities from 22, shown side by side
@@ -32,12 +33,12 @@ Get the package for your platform from the [Releases](../../releases) page:
 
 | Platform | File | Notes |
 | --- | --- | --- |
-| Windows | `DeskClock-Setup-1.1.0.exe` | Installer (creates a desktop shortcut) |
+| Windows | `DeskClock-Setup-1.2.0.exe` | Installer (creates a desktop shortcut) |
 | Windows | `DeskClock-Windows.zip` | Portable, unzip and run |
-| macOS (Apple Silicon) | `DeskClock-1.1.0-arm64.dmg` | M1/M2/M3/M4 |
-| macOS (Intel) | `DeskClock-1.1.0-x64.dmg` | Intel processors |
-| Android | `DeskClock-1.1.0.apk` | Android 8.0+ |
-| iOS | `DeskClock-1.1.0-unsigned.ipa` | iOS 15+, self-signing required |
+| macOS (Apple Silicon) | `DeskClock-1.2.0-arm64.dmg` | M1/M2/M3/M4 |
+| macOS (Intel) | `DeskClock-1.2.0-x64.dmg` | Intel processors |
+| Android | `DeskClock-1.2.0.apk` | Android 8.0+ |
+| iOS | `DeskClock-1.2.0-unsigned.ipa` | iOS 15+, self-signing required |
 
 ## Usage
 

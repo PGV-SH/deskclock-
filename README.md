@@ -1,16 +1,20 @@
 # 极简时钟 · DeskClock
 
-把闲置的平板、旧手机、旧电脑变成一台优雅的桌面时钟。单文件网页内核，同一套界面同时支持 **Windows / macOS / Android / 浏览器**。
+[English README](README_EN.md)
 
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Android%20%7C%20Web-blue)
+把闲置的平板、旧手机、旧电脑变成一台优雅的桌面时钟。单文件网页内核，同一套界面同时支持 **Windows / macOS / Android / iOS / 浏览器**。
+
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Android%20%7C%20iOS%20%7C%20Web-blue)
 ![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-orange)
 
 ## 功能特性
 
-### 12 种表盘样式
-罗马盘 · 极简盘 · 大数字 · 翻页卡 · 世界钟 · 文字钟 · 圆环钟 · 上下数字 · 二进制钟 · 点阵钟 · 左右数字 · 大字日期
+### 13 种表盘样式
+罗马盘 · 极简盘 · 方盘 · 大数字 · 翻页卡 · 世界钟 · 文字钟 · 圆环钟 · 上下数字 · 二进制钟 · 点阵钟 · 左右数字 · 大字日期
 
 ### 个性化
+- **闹钟**：底部工具栏独立闹钟面板（快捷键 A），多闹钟、贪睡、4 种程序合成铃声含强力警报（无音频文件，零版权问题）
+- **多语言**：默认跟随系统语言，支持简体中文、繁体中文、English、日本語、Français、Deutsch、Español、한국어，可在设置中手动切换
 - **自定义背景图片**：选一张喜欢的照片当表盘背景，本地压缩保存，不上传
 - **世界时钟**：22 个城市任意勾选（最多 6 个），同时显示各地时间
 - **4 套主题**：暗夜 / 纸白 / 墨蓝 / 暖光，另有 6 种强调色
@@ -21,6 +25,7 @@
 - **屏幕常亮**：阻止设备休眠（桌面端使用系统级电源管理）
 - **夜间自动调暗**：22:00 – 7:00 自动降低亮度
 - **闲置自动隐藏界面**：几秒无操作后隐藏所有按钮，只留纯粹的时钟
+- 设置面板打开时，点任意空白区域即可关闭并回到时钟界面
 
 ## 下载
 
@@ -28,12 +33,12 @@
 
 | 平台 | 文件 | 说明 |
 | --- | --- | --- |
-| Windows | `DeskClock-Setup-1.0.0.exe` | 安装程序（自动创建桌面快捷方式） |
+| Windows | `DeskClock-Setup-1.2.0.exe` | 安装程序（自动创建桌面快捷方式） |
 | Windows | `DeskClock-Windows.zip` | 免安装便携版，解压即用 |
-| macOS（Apple 芯片） | `DeskClock-1.0.0-arm64.dmg` | M1/M2/M3/M4 系列 |
-| macOS（Intel） | `DeskClock-1.0.0-x64.dmg` | Intel 处理器 |
-| Android | `DeskClock-1.0.0.apk` | Android 8.0 及以上 |
-| iOS | `DeskClock-1.0.0-unsigned.ipa` | iOS 15+，需自行签名安装 |
+| macOS（Apple 芯片） | `DeskClock-1.2.0-arm64.dmg` | M1/M2/M3/M4 系列 |
+| macOS（Intel） | `DeskClock-1.2.0-x64.dmg` | Intel 处理器 |
+| Android | `DeskClock-1.2.0.apk` | Android 8.0 及以上 |
+| iOS | `DeskClock-1.2.0-unsigned.ipa` | iOS 15+，需自行签名安装 |
 
 ## 使用说明
 
@@ -77,10 +82,4 @@
 | [Chromium](https://www.chromium.org/) | BSD | 内置于 Electron 的渲染引擎 |
 
 上述组件的完整许可证文本已随安装包附带（`LICENSE`、`LICENSES.chromium.html`）。
-<img width="2560" height="1351" alt="e0f79a6ca12d65bb8c321fc8c8d3c67f" src="https://github.com/user-attachments/assets/ba3ee772-13bb-4756-8e32-fa7b234ff445" />
-<img width="2560" height="1351" alt="c23d3274b71e9b85cc2a4052af14f2a3" src="https://github.com/user-attachments/assets/376d656b-5f4d-4bc1-9a67-fb223fe95e22" />
-<img width="1710" height="1112" alt="截屏2026-10-31 12 00 37" src="https://github.com/user-attachments/assets/658ee62a-3b79-4eaa-828b-c9165662f57d" />
-<img width="2560" height="1350" alt="80e0c3cf641d6223d452512781314ca6" src="https://github.com/user-attachments/assets/700eaf87-42af-4f9c-8992-e4d678543dda" />
-<img width="2560" height="1350" alt="9f28df44c9253eb511189ba6bfcc8b14" src="https://github.com/user-attachments/assets/c1763dca-6c9b-46d3-ac2a-5d11fb9f8491" />
-
 
