@@ -77,4 +77,10 @@
 | [Chromium](https://www.chromium.org/) | BSD | 内置于 Electron 的渲染引擎 |
 
 上述组件的完整许可证文本已随安装包附带（`LICENSE`、`LICENSES.chromium.html`）。
+<img width="2560" height="1351" alt="e0f79a6ca12d65bb8c321fc8c8d3c67f" src="https://github.com/user-attachments/assets/ba3ee772-13bb-4756-8e32-fa7b234ff445" />
+<img width="2560" height="1351" alt="c23d3274b71e9b85cc2a4052af14f2a3" src="https://github.com/user-attachments/assets/376d656b-5f4d-4bc1-9a67-fb223fe95e22" />
+<img width="1710" height="1112" alt="截屏2026-10-31 12 00 37" src="https://github.com/user-attachments/assets/658ee62a-3b79-4eaa-828b-c9165662f57d" />
+<img width="2560" height="1350" alt="80e0c3cf641d6223d452512781314ca6" src="https://github.com/user-attachments/assets/700eaf87-42af-4f9c-8992-e4d678543dda" />
+<img width="2560" height="1350" alt="9f28df44c9253eb511189ba6bfcc8b14" src="https://github.com/user-attachments/assets/c1763dca-6c9b-46d3-ac2a-5d11fb9f8491" />
+
 
